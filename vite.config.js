@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: '/pomodoro_pwa/',
+  base: '/pomodoro-pwa/',
   plugins: [
     vue(),
     VitePWA({
@@ -17,8 +17,8 @@ export default defineConfig({
         background_color: '#1A1210',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/pomodoro_pwa/',
-        start_url: '/pomodoro_pwa/',
+        scope: '/pomodoro-pwa/',
+        start_url: '/pomodoro-pwa/',
         icons: [
           {
             src: 'pwa-192x192.png',

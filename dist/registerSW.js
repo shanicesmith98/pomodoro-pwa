@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/pomodoro_pwa/sw.js', { scope: '/pomodoro_pwa/' })})}
