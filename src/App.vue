@@ -4,9 +4,9 @@ import ProgressRing from './components/ProgressRing.vue'
 
 // ── Mode config ──
 const MODES = {
-  work:       { label: 'Focus',       color: '#E07A5F', bg: '#1A1210', ring: '#E07A5F', track: '#3D2A24', cardBg: '#251C18', inputBg: '#2A201B', doneBg: 'rgba(224,122,95,0.06)' },
+  work:       { label: 'Focus',       color: '#8B9ADF', bg: '#12121E', ring: '#8B9ADF', track: '#252540', cardBg: '#1A1A2E', inputBg: '#1F1F33', doneBg: 'rgba(139,154,223,0.06)' },
   shortBreak: { label: 'Short Break', color: '#6BC4B4', bg: '#101A18', ring: '#6BC4B4', track: '#1E3832', cardBg: '#162420', inputBg: '#1B2A26', doneBg: 'rgba(107,196,180,0.06)' },
-  longBreak:  { label: 'Long Break',  color: '#8B9ADF', bg: '#12121E', ring: '#8B9ADF', track: '#252540', cardBg: '#1A1A2E', inputBg: '#1F1F33', doneBg: 'rgba(139,154,223,0.06)' },
+  longBreak:  { label: 'Long Break',  color: '#E8A0BF', bg: '#1A1018', ring: '#E8A0BF', track: '#3D2035', cardBg: '#251520', inputBg: '#2A1A26', doneBg: 'rgba(232,160,191,0.06)' },
 }
 
 // ── Helpers ──
