@@ -82,6 +82,31 @@ function releaseWakeLock() {
   }
 }
 
+// ── Sound ──
+function playChime(type = 'work') {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)()
+
+  const notes = type === 'work'
+    ? [523.25, 659.25, 783.99, 1046.5]   // C5 E5 G5 C6 — bright ascending
+    : [783.99, 659.25, 523.25]            // G5 E5 C5 — gentle descending
+
+  let time = ctx.currentTime
+  notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(freq, time)
+    gain.gain.setValueAtTime(0, time)
+    gain.gain.linearRampToValueAtTime(0.25, time + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.6)
+    osc.start(time)
+    osc.stop(time + 0.6)
+    time += 0.18
+  })
+}
+
 // ── Notifications ──
 function requestNotificationPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
@@ -111,10 +136,12 @@ function startTimer() {
       if (mode.value === 'work') {
         sessions.value++
         const nextMode = sessions.value % 4 === 0 ? 'longBreak' : 'shortBreak'
+        playChime('work')
         sendNotification('Focus session complete!', `Time for a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`)
         mode.value = nextMode
         timeLeft.value = durations.value[nextMode] * 60
       } else {
+        playChime('break')
         sendNotification('Break over!', 'Ready to focus again?')
         mode.value = 'work'
         timeLeft.value = durations.value.work * 60
