@@ -226,7 +226,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="min-h-screen flex flex-col items-center px-4 py-6 pb-12 transition-colors duration-500"
+    class="min-h-screen flex flex-col items-center px-4 py-12 pb-12 transition-colors duration-500"
     :style="{ background: cfg.bg }"
   >
     <!-- Mode tabs -->
