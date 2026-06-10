@@ -72,34 +72,11 @@ npm test          # single run
 npm run test:watch  # watch mode
 ```
 
-72 unit tests covering `useTimer`, `useTodos`, `useXP`, and `useAudio` composables.
-
 ## Preview the production build locally
 
 ```bash
 npm run preview
 ```
-
-## Deploy
-
-The repo includes a GitHub Actions workflow that auto-deploys to GitHub Pages on every push to `main`. No manual steps needed once the repository's Pages setting is pointed at GitHub Actions.
-
-For other hosts:
-
-### Vercel
-```bash
-npm i -g vercel
-vercel
-```
-
-### Netlify
-```bash
-npm i -g netlify-cli
-netlify deploy --prod --dir=dist
-```
-
-### Cloudflare Pages
-Connect your repo at https://pages.cloudflare.com — set build command to `npm run build` and output directory to `dist`.
 
 ## Install on iPhone
 
