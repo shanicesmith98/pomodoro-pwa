@@ -100,15 +100,24 @@ function releaseWakeLock() {
 }
 
 // ── Sound ──
-function playChime(type = 'work') {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)()
+let sharedCtx = null
 
+function getAudioCtx() {
+  if (!sharedCtx || sharedCtx.state === 'closed') {
+    sharedCtx = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  if (sharedCtx.state === 'suspended') sharedCtx.resume()
+  return sharedCtx
+}
+
+function playChime(type = 'work') {
+  const ctx = getAudioCtx()
   const notes = type === 'work'
-    ? [523.25, 659.25, 783.99, 1046.5]   // C5 E5 G5 C6 — bright ascending
-    : [783.99, 659.25, 523.25]            // G5 E5 C5 — gentle descending
+    ? [523.25, 659.25, 783.99, 1046.5]
+    : [783.99, 659.25, 523.25]
 
   let time = ctx.currentTime
-  notes.forEach((freq, i) => {
+  notes.forEach((freq) => {
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.connect(gain)
@@ -122,6 +131,108 @@ function playChime(type = 'work') {
     osc.stop(time + 0.6)
     time += 0.18
   })
+}
+
+// ── Ambient sound ──
+const ambientEnabled = ref(true)
+let ambientNodes = []
+let ambientMaster = null
+let fadeOutTimer = null
+
+function stopAmbient() {
+  if (fadeOutTimer) { clearTimeout(fadeOutTimer); fadeOutTimer = null }
+  ambientNodes.forEach(n => { try { n.stop() } catch {} })
+  ambientNodes = []
+  ambientMaster = null
+}
+
+function startAmbient(type) {
+  stopAmbient()
+  if (!ambientEnabled.value) return
+
+  const ctx = getAudioCtx()
+  const master = ctx.createGain()
+  master.gain.setValueAtTime(0, ctx.currentTime)
+  master.gain.linearRampToValueAtTime(1, ctx.currentTime + 2)
+  master.connect(ctx.destination)
+  ambientMaster = master
+
+  if (type === 'rain') {
+    const bufferSize = ctx.sampleRate * 3
+    const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate)
+    for (let c = 0; c < 2; c++) {
+      const data = buffer.getChannelData(c)
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1
+    }
+    const noise = ctx.createBufferSource()
+    noise.buffer = buffer
+    noise.loop = true
+
+    const lp = ctx.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 2200
+
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 600
+    bp.Q.value = 0.6
+
+    const gain = ctx.createGain()
+    gain.gain.value = 0.35
+
+    noise.connect(lp)
+    lp.connect(bp)
+    bp.connect(gain)
+    gain.connect(master)
+    noise.start()
+    ambientNodes.push(noise)
+
+  } else {
+    // Lo-fi warm pad: Fmaj7 voicing (F2, C3, E3, A3) + slow LFO shimmer
+    const chordFreqs = [87.3, 130.8, 164.8, 220]
+    chordFreqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      osc.type = i === 0 ? 'sine' : 'triangle'
+      osc.frequency.value = freq
+      osc.detune.value = (Math.random() - 0.5) * 10
+
+      const lp = ctx.createBiquadFilter()
+      lp.type = 'lowpass'
+      lp.frequency.value = 700
+
+      const lfo = ctx.createOscillator()
+      lfo.frequency.value = 0.25 + Math.random() * 0.15
+      const lfoDepth = ctx.createGain()
+      lfoDepth.gain.value = 0.04
+      lfo.connect(lfoDepth)
+
+      const gain = ctx.createGain()
+      gain.gain.value = i === 0 ? 0.18 : 0.1
+      lfoDepth.connect(gain.gain)
+
+      osc.connect(lp)
+      lp.connect(gain)
+      gain.connect(master)
+      osc.start()
+      lfo.start()
+      ambientNodes.push(osc, lfo)
+    })
+  }
+}
+
+function toggleAmbient() {
+  ambientEnabled.value = !ambientEnabled.value
+  if (!running.value) return
+  ambientEnabled.value
+    ? startAmbient(mode.value === 'work' ? 'rain' : 'lofi')
+    : fadeOutAmbient()
+}
+
+function fadeOutAmbient() {
+  if (!ambientMaster) return
+  const ctx = getAudioCtx()
+  ambientMaster.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5)
+  fadeOutTimer = setTimeout(stopAmbient, 1600)
 }
 
 // ── Notifications ──
@@ -142,6 +253,7 @@ function startTimer() {
   running.value = true
   requestWakeLock()
   requestNotificationPermission()
+  startAmbient(mode.value === 'work' ? 'rain' : 'lofi')
 
   intervalId = setInterval(() => {
     if (timeLeft.value <= 1) {
@@ -158,11 +270,13 @@ function startTimer() {
         currentStretchPrompt.value = STRETCH_PROMPTS[Math.floor(Math.random() * STRETCH_PROMPTS.length)]
         mode.value = nextMode
         timeLeft.value = durations.value[nextMode] * 60
+        startAmbient('lofi')
       } else {
         playChime('break')
         sendNotification('Break over!', 'Ready to focus again?')
         mode.value = 'work'
         timeLeft.value = durations.value.work * 60
+        startAmbient('rain')
       }
       return
     }
@@ -176,6 +290,7 @@ function pauseTimer() {
   intervalId = null
   releaseWakeLock()
   document.title = 'Pomodoro Focus'
+  fadeOutAmbient()
 }
 
 function toggleTimer() {
@@ -239,6 +354,7 @@ function cancelEdit() {
 onUnmounted(() => {
   clearInterval(intervalId)
   releaseWakeLock()
+  stopAmbient()
 })
 </script>
 
@@ -340,6 +456,14 @@ onUnmounted(() => {
         class="w-full max-w-sm rounded-2xl p-4 mb-6"
         :style="{ background: cfg.cardBg, boxShadow: '0 2px 16px rgba(0,0,0,0.3)' }"
       >
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-xs font-semibold uppercase tracking-widest" style="color: rgba(255,255,255,0.3)">Ambient sound</p>
+          <button
+            @click="toggleAmbient"
+            class="text-xs px-3 py-1 rounded-full transition-colors"
+            :style="{ background: ambientEnabled ? cfg.color : 'rgba(255,255,255,0.08)', color: ambientEnabled ? cfg.bg : 'rgba(255,255,255,0.4)' }"
+          >{{ ambientEnabled ? 'On' : 'Off' }}</button>
+        </div>
         <p class="text-xs font-semibold uppercase tracking-widest mb-3" style="color: rgba(255,255,255,0.3)">
           Duration (minutes)
         </p>
