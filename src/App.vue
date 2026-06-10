@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useTimer } from './composables/useTimer.js'
 import { useTodos } from './composables/useTodos.js'
+import { useXP } from './composables/useXP.js'
 import { ambientEnabled, toggleAmbient } from './composables/useAudio.js'
 import { MODES } from './config/modes.js'
 import ProgressRing from './components/ProgressRing.vue'
@@ -28,10 +29,21 @@ const {
 } = useTimer()
 
 const { activeTask, incrementActual } = useTodos()
+const { level, levelTitle, levelProgress, xpToNextLevel, isMaxLevel, addSessionXP } = useXP()
 
-// #2 — When a work session completes, credit actual pomodoro to the active task
+const completionXP = ref(0)
+const completionLevelUp = ref(false)
+const completionNewLevel = ref(1)
+const completionLevelTitle = ref('')
+
+// When a work session completes: credit task XP, award XP, capture result for overlay
 watch(sessions, () => {
   if (activeTask.value) incrementActual(activeTask.value.id)
+  const result = addSessionXP()
+  completionXP.value = result.xpGained
+  completionLevelUp.value = result.didLevelUp
+  completionNewLevel.value = result.newLevel
+  completionLevelTitle.value = levelTitle.value
 })
 
 // #4 — Animate ring track color as session progresses
@@ -145,6 +157,26 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
       </span>
     </div>
 
+    <!-- XP / level badge -->
+    <div class="flex items-center gap-2 mb-4" aria-label="Experience points and level">
+      <div
+        class="flex items-center gap-1.5 rounded-full px-3 py-1"
+        style="background: rgba(255,255,255,0.06)"
+      >
+        <span class="text-xs font-bold" :style="{ color: cfg.color }">Lv {{ level }}</span>
+        <span class="text-xs" style="color: rgba(255,255,255,0.35)">{{ levelTitle }}</span>
+      </div>
+      <div class="flex-1 max-w-24 rounded-full h-1" style="background: rgba(255,255,255,0.08)">
+        <div
+          class="h-1 rounded-full transition-all duration-700"
+          :style="{ width: `${levelProgress * 100}%`, background: cfg.color }"
+        />
+      </div>
+      <span v-if="!isMaxLevel" class="text-xs" style="color: rgba(255,255,255,0.3)">
+        {{ xpToNextLevel }} XP
+      </span>
+    </div>
+
     <!-- Today's focus bar -->
     <div class="w-full max-w-sm mb-6" role="meter" :aria-valuenow="todayMinutes" :aria-valuemax="todayTarget" aria-label="Today's focus time">
       <div class="flex justify-between mb-1">
@@ -186,6 +218,10 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
       v-if="showCompletion"
       :sessions="sessions"
       :cfg="cfg"
+      :xp-gained="completionXP"
+      :did-level-up="completionLevelUp"
+      :new-level="completionNewLevel"
+      :level-title="completionLevelTitle"
       @dismiss="showCompletion = false"
     />
   </div>
