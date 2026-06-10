@@ -3,6 +3,8 @@ import { ref, computed, watch, watchEffect } from 'vue'
 import { useTimer } from './composables/useTimer.js'
 import { useTodos } from './composables/useTodos.js'
 import { useXP } from './composables/useXP.js'
+import { useStreak, recordSessionDay } from './composables/useStreak.js'
+import { useWinLog } from './composables/useWinLog.js'
 import { useBodyDoubling } from './composables/useBodyDoubling.js'
 import { ambientEnabled, toggleAmbient, youtubeActive, startAmbient } from './composables/useAudio.js'
 import { focusYouTubeUrl, breakYouTubeUrl, parseYouTubeUrl } from './composables/useYouTube.js'
@@ -31,6 +33,8 @@ const {
 
 const { activeTask, incrementActual } = useTodos()
 const { level, levelTitle, levelProgress, xpToNextLevel, isMaxLevel, addSessionXP } = useXP()
+const { streak, isActiveToday } = useStreak()
+const { todayWins, addWin } = useWinLog()
 const { focuserCount } = useBodyDoubling()
 
 const completionXP = ref(0)
@@ -38,7 +42,7 @@ const completionLevelUp = ref(false)
 const completionNewLevel = ref(1)
 const completionLevelTitle = ref('')
 
-// When a work session completes: credit task XP, award XP, capture result for overlay
+// When a work session completes: credit task, award XP, record streak
 watch(sessions, () => {
   if (activeTask.value) incrementActual(activeTask.value.id)
   const result = addSessionXP()
@@ -46,6 +50,7 @@ watch(sessions, () => {
   completionLevelUp.value = result.didLevelUp
   completionNewLevel.value = result.newLevel
   completionLevelTitle.value = levelTitle.value
+  recordSessionDay()
 })
 
 // YouTube — pick URL for current mode, disable ambient when active
@@ -195,6 +200,19 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
       </span>
     </div>
 
+    <!-- Streak badge -->
+    <div
+      v-if="streak > 0"
+      class="flex items-center gap-1.5 rounded-full px-3 py-1 mb-4"
+      :style="{ background: isActiveToday ? `${cfg.color}18` : 'rgba(255,255,255,0.04)' }"
+      :aria-label="`${streak}-day streak${isActiveToday ? ', active today' : ', not yet active today'}`"
+    >
+      <span :style="{ opacity: isActiveToday ? 1 : 0.4 }">🔥</span>
+      <span class="text-xs font-semibold" :style="{ color: isActiveToday ? cfg.color : 'rgba(255,255,255,0.3)' }">
+        {{ streak }} day{{ streak !== 1 ? 's' : '' }}
+      </span>
+    </div>
+
     <!-- Today's focus bar -->
     <div class="w-full max-w-sm mb-6" role="meter" :aria-valuenow="todayMinutes" :aria-valuemax="todayTarget" aria-label="Today's focus time">
       <div class="flex justify-between mb-1">
@@ -244,6 +262,20 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
 
     <TodoList :cfg="cfg" :is-break="isBreak" :running="running" />
 
+    <!-- Today's wins -->
+    <div v-if="todayWins.length" class="w-full max-w-sm mt-6" aria-label="Today's wins">
+      <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color: rgba(255,255,255,0.35)">
+        Today's wins
+      </p>
+      <ul class="flex flex-col gap-1.5 list-none p-0 m-0">
+        <li
+          v-for="(win, i) in todayWins" :key="i"
+          class="text-sm rounded-xl px-4 py-2.5"
+          :style="{ background: cfg.doneBg, color: 'rgba(255,255,255,0.6)' }"
+        >{{ win }}</li>
+      </ul>
+    </div>
+
     <SessionCompleteOverlay
       v-if="showCompletion"
       :sessions="sessions"
@@ -253,6 +285,7 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
       :new-level="completionNewLevel"
       :level-title="completionLevelTitle"
       @dismiss="showCompletion = false"
+      @add-win="addWin"
     />
   </div>
 </template>
