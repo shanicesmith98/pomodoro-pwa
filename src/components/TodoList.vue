@@ -10,8 +10,8 @@ const props = defineProps({
 
 const {
   todos, newTodo, editingId, editText, todoInput, editInput,
-  pendingTodos, doneTodos, completedCount, activeTask,
-  addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate,
+  pendingTodos, doneTodos, completedCount, activeTask, pinnedTaskId,
+  addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, setActiveTask,
 } = useTodos()
 
 const showAll = ref(false)
@@ -107,14 +107,21 @@ function accuracyColor(todo) {
       <TransitionGroup name="task" tag="ul" class="flex flex-col gap-2 list-none p-0 m-0" aria-label="Pending tasks">
         <li
           v-for="todo in pendingTodos" :key="todo.id"
-          class="flex items-center gap-3 rounded-xl px-4 py-3 group"
-          :style="{ background: cfg.cardBg, boxShadow: '0 1px 6px rgba(0,0,0,0.15)' }"
+          class="flex items-center gap-3 rounded-xl px-4 py-3 group transition-all"
+          :class="{ 'cursor-pointer': focusMode && todo.id !== activeTask?.id }"
+          :style="{
+            background: cfg.cardBg,
+            boxShadow: focusMode && todo.id === activeTask?.id
+              ? `0 0 0 2px ${cfg.color}, 0 1px 6px rgba(0,0,0,0.15)`
+              : '0 1px 6px rgba(0,0,0,0.15)',
+          }"
+          @click.self="focusMode && setActiveTask(todo.id)"
         >
           <button
             @click="toggleTodo(todo.id)"
             :aria-label="`Mark '${todo.text}' as complete`"
             class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
-            :style="{ borderColor: cfg.track }"
+            :style="{ borderColor: focusMode && todo.id === activeTask?.id ? cfg.color : cfg.track }"
           />
           <input
             v-if="editingId === todo.id"
@@ -129,9 +136,18 @@ function accuracyColor(todo) {
           />
           <span
             v-else
-            @dblclick="startEdit(todo)"
-            class="flex-1 text-sm cursor-pointer select-none"
-            style="color: rgba(255,255,255,0.8)"
+            @dblclick="!focusMode && startEdit(todo)"
+            @click="focusMode && setActiveTask(todo.id)"
+            :aria-label="focusMode ? `Focus on '${todo.text}'` : todo.text"
+            :aria-pressed="focusMode ? todo.id === activeTask?.id : undefined"
+            :role="focusMode ? 'button' : undefined"
+            class="flex-1 text-sm select-none transition-colors"
+            :class="{ 'cursor-pointer': focusMode }"
+            :style="{
+              color: focusMode && todo.id === activeTask?.id
+                ? 'rgba(255,255,255,0.95)'
+                : 'rgba(255,255,255,0.8)',
+            }"
           >{{ todo.text }}</span>
           <input
             type="number"
@@ -194,8 +210,8 @@ function accuracyColor(todo) {
       </p>
     </div>
 
-    <p v-if="!focusMode" class="mt-8 text-xs text-center" style="color: rgba(255,255,255,0.25)">
-      Double-tap a task to edit
+    <p class="mt-8 text-xs text-center" style="color: rgba(255,255,255,0.25)">
+      {{ focusMode ? 'Tap a task to switch focus' : 'Double-tap a task to edit' }}
     </p>
   </div>
 </template>

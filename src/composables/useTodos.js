@@ -8,11 +8,19 @@ const editingId = ref(null)
 const editText = ref('')
 const todoInput = ref(null)
 const editInput = ref(null)
+const pinnedTaskId = ref(null)
 
 const pendingTodos = computed(() => todos.value.filter(t => !t.done))
 const doneTodos = computed(() => todos.value.filter(t => t.done))
 const completedCount = computed(() => doneTodos.value.length)
-const activeTask = computed(() => pendingTodos.value[0] ?? null)
+const activeTask = computed(() => {
+  if (pinnedTaskId.value) {
+    const pinned = pendingTodos.value.find(t => t.id === pinnedTaskId.value)
+    if (pinned) return pinned
+    pinnedTaskId.value = null  // pinned task was completed or deleted
+  }
+  return pendingTodos.value[0] ?? null
+})
 
 watch(todos, (val) => localStorage.setItem('pomo-todos', JSON.stringify(val)), { deep: true })
 
@@ -65,10 +73,14 @@ function incrementActual(id) {
   t.actual = (t.actual ?? 0) + 1
 }
 
+function setActiveTask(id) {
+  pinnedTaskId.value = id
+}
+
 export function useTodos() {
   return {
     todos, newTodo, editingId, editText, todoInput, editInput,
-    pendingTodos, doneTodos, completedCount, activeTask,
-    addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, incrementActual,
+    pendingTodos, doneTodos, completedCount, activeTask, pinnedTaskId,
+    addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, incrementActual, setActiveTask,
   }
 }
