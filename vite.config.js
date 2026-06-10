@@ -3,6 +3,11 @@ import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  test: {
+    environment: 'happy-dom',
+    globals: true,
+    setupFiles: ['./src/tests/setup.js'],
+  },
   base: '/pomodoro-pwa/',
   plugins: [
     vue(),
