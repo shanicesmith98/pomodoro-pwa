@@ -21,6 +21,12 @@ function requestNotificationPermission() {
   }
 }
 
+let themeColorMeta = null
+function setThemeColor(color) {
+  if (!themeColorMeta) themeColorMeta = document.querySelector('meta[name="theme-color"]')
+  themeColorMeta?.setAttribute('content', color)
+}
+
 function todayKey() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -54,10 +60,7 @@ export function useTimer() {
   watch(timeLeft, (t) => {
     document.title = running.value ? `${formatTime(t)} — ${cfg.value.label}` : 'Pomodoro Focus'
   })
-  watch(mode, (m) => {
-    const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', MODES[m].bg)
-  })
+  watch(mode, (m) => setThemeColor(MODES[m].bg))
 
   function formatTime(s) {
     const m = Math.floor(s / 60)

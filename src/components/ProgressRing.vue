@@ -1,25 +1,34 @@
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
-  radius: { type: Number, required: true },
-  stroke: { type: Number, default: 8 },
-  progress: { type: Number, default: 0 },
-  color: { type: String, default: '#E07A5F' },
-  trackColor: { type: String, default: '#3D2A24' }
+  radius:     { type: Number, required: true, validator: v => v > 0 },
+  stroke:     { type: Number, default: 8,     validator: v => v > 0 },
+  progress:   { type: Number, default: 0,     validator: v => v >= 0 && v <= 1 },
+  color:      { type: String, default: '#8B9ADF' },
+  trackColor: { type: String, default: '#252540' },
+  label:      { type: String, default: 'Timer progress' },
 })
 
-const norm = Math.max(props.radius, 1)
-const innerR = norm - props.stroke / 2
-const circumference = 2 * Math.PI * innerR
+const size = computed(() => props.radius * 2)
+const innerR = computed(() => props.radius - props.stroke / 2)
+const circumference = computed(() => 2 * Math.PI * innerR.value)
 </script>
 
 <template>
-  <svg :width="norm * 2" :height="norm * 2" class="block">
+  <svg
+    :width="size" :height="size"
+    :viewBox="`0 0 ${size} ${size}`"
+    class="block"
+    role="img"
+    :aria-label="label"
+  >
     <circle
-      :cx="norm" :cy="norm" :r="innerR"
+      :cx="radius" :cy="radius" :r="innerR"
       fill="none" :stroke="trackColor" :stroke-width="stroke"
     />
     <circle
-      :cx="norm" :cy="norm" :r="innerR"
+      :cx="radius" :cy="radius" :r="innerR"
       fill="none" :stroke="color" :stroke-width="stroke"
       stroke-linecap="round"
       :stroke-dasharray="circumference"

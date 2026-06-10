@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useTimer } from './composables/useTimer.js'
 import { useTodos } from './composables/useTodos.js'
 import { ambientEnabled, toggleAmbient } from './composables/useAudio.js'
@@ -10,6 +10,15 @@ import SettingsPanel from './components/SettingsPanel.vue'
 import TodoList from './components/TodoList.vue'
 
 const showSettings = ref(false)
+const themeColorMeta = ref(null)
+onMounted(() => { themeColorMeta.value = document.querySelector('meta[name="theme-color"]') })
+
+const modeKeys = Object.keys(MODES)
+function onModeKeydown(e, key) {
+  const idx = modeKeys.indexOf(key)
+  if (e.key === 'ArrowRight') switchMode(modeKeys[(idx + 1) % modeKeys.length])
+  else if (e.key === 'ArrowLeft') switchMode(modeKeys[(idx - 1 + modeKeys.length) % modeKeys.length])
+}
 
 const {
   mode, running, sessions, durations, timeLeft, currentStretchPrompt, todayMinutes,
@@ -48,14 +57,22 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
     :style="{ background: cfg.bg }"
   >
     <!-- Mode tabs -->
-    <div class="flex gap-1 rounded-full p-1 mb-6" style="background: rgba(255,255,255,0.06)">
+    <div
+      role="tablist"
+      aria-label="Timer mode"
+      class="flex gap-1 rounded-full p-1 mb-6"
+      style="background: rgba(255,255,255,0.06)"
+    >
       <button
         v-for="(val, key) in MODES" :key="key"
+        role="tab"
+        :aria-selected="mode === key"
         @click="switchMode(key)"
+        @keydown="onModeKeydown($event, key)"
         class="px-4 py-1.5 rounded-full text-sm font-medium transition-all"
         :style="{
           background: mode === key ? 'rgba(255,255,255,0.1)' : 'transparent',
-          color: mode === key ? val.color : 'rgba(255,255,255,0.35)',
+          color: mode === key ? val.color : 'rgba(255,255,255,0.5)',
           boxShadow: mode === key ? '0 1px 6px rgba(0,0,0,0.3)' : 'none',
         }"
       >{{ val.label }}</button>
@@ -67,66 +84,71 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
         :radius="110" :stroke="8"
         :progress="progress"
         :color="cfg.ring" :track-color="animatedTrackColor"
+        :label="`${formatTime(timeLeft)} remaining in ${cfg.label}`"
       />
-      <div class="absolute inset-0 flex flex-col items-center justify-center">
+      <div class="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
         <span class="timer-display" :style="{ color: cfg.color }">{{ formatTime(timeLeft) }}</span>
         <span
           class="text-xs mt-1.5 font-medium uppercase tracking-widest"
-          :style="{ color: cfg.color, opacity: 0.5 }"
+          :style="{ color: cfg.color, opacity: 0.6 }"
         >{{ cfg.label }}</span>
       </div>
     </div>
 
     <!-- Controls -->
-    <div class="flex items-center gap-3 mb-2">
+    <div class="flex items-center gap-3 mb-2" role="group" aria-label="Timer controls">
       <button
         @click="toggleTimer"
+        :aria-label="running ? 'Pause timer' : 'Start timer'"
         class="px-8 py-2.5 rounded-full text-sm font-semibold tracking-wide uppercase transition-transform active:scale-95"
         :style="{ background: cfg.color, color: cfg.bg }"
       >{{ running ? 'Pause' : 'Start' }}</button>
 
       <button
         @click="resetTimer"
+        aria-label="Reset timer"
         class="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
         style="background: rgba(255,255,255,0.07)"
-        title="Reset"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M2 2v5h5" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M2.5 7A6 6 0 1 1 3.8 11" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"/>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M2 2v5h5" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2.5 7A6 6 0 1 1 3.8 11" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
       </button>
 
       <button
         @click="showSettings = !showSettings"
+        :aria-expanded="showSettings"
+        aria-controls="settings-panel"
+        aria-label="Toggle settings"
         class="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
         :style="{ background: showSettings ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.07)' }"
-        title="Settings"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <circle cx="8" cy="8" r="2" stroke="rgba(255,255,255,0.4)" stroke-width="1.3"/>
-          <path d="M8 1v2m0 10v2M1 8h2m10 0h2m-1.5-5.5L12 4m-8 8-1.5 1.5m0-11L4 4m8 8 1.5 1.5" stroke="rgba(255,255,255,0.4)" stroke-width="1.3" stroke-linecap="round"/>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="2" stroke="rgba(255,255,255,0.5)" stroke-width="1.3"/>
+          <path d="M8 1v2m0 10v2M1 8h2m10 0h2m-1.5-5.5L12 4m-8 8-1.5 1.5m0-11L4 4m8 8 1.5 1.5" stroke="rgba(255,255,255,0.5)" stroke-width="1.3" stroke-linecap="round"/>
         </svg>
       </button>
     </div>
 
     <!-- Session dots -->
-    <div class="flex items-center gap-1.5 mb-3">
+    <div class="flex items-center gap-1.5 mb-3" aria-label="Session progress" role="status">
       <div
         v-for="i in 4" :key="i"
         class="w-2.5 h-2.5 rounded-full transition-colors"
+        :aria-label="`Session ${i}: ${(i - 1) < (sessions % 4) ? 'complete' : 'incomplete'}`"
         :style="{ background: (i - 1) < (sessions % 4) ? cfg.color : cfg.track }"
       />
-      <span class="text-xs ml-1.5" style="color: rgba(255,255,255,0.3)">
+      <span class="text-xs ml-1.5" style="color: rgba(255,255,255,0.5)">
         {{ sessions }} session{{ sessions !== 1 ? 's' : '' }}
       </span>
     </div>
 
     <!-- Today's focus bar -->
-    <div class="w-full max-w-sm mb-6">
+    <div class="w-full max-w-sm mb-6" role="meter" :aria-valuenow="todayMinutes" :aria-valuemax="todayTarget" aria-label="Today's focus time">
       <div class="flex justify-between mb-1">
-        <span class="text-xs" style="color: rgba(255,255,255,0.25)">Today</span>
-        <span class="text-xs" style="color: rgba(255,255,255,0.25)">{{ todayMinutes }} / {{ todayTarget }} min</span>
+        <span class="text-xs" style="color: rgba(255,255,255,0.5)">Today</span>
+        <span class="text-xs" style="color: rgba(255,255,255,0.5)">{{ todayMinutes }} / {{ todayTarget }} min</span>
       </div>
       <div class="w-full rounded-full h-1" :style="{ background: cfg.track }">
         <div
@@ -140,6 +162,7 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
     <Transition name="settings">
       <SettingsPanel
         v-if="showSettings"
+        id="settings-panel"
         :cfg="cfg"
         :durations="durations"
         :ambient-enabled="ambientEnabled"
