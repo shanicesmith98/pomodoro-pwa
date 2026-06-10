@@ -1,15 +1,17 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, watchEffect, onMounted } from 'vue'
 import { useTimer } from './composables/useTimer.js'
 import { useTodos } from './composables/useTodos.js'
 import { useXP } from './composables/useXP.js'
-import { ambientEnabled, toggleAmbient } from './composables/useAudio.js'
+import { ambientEnabled, toggleAmbient, youtubeActive } from './composables/useAudio.js'
+import { focusYouTubeUrl, breakYouTubeUrl, parseYouTubeUrl } from './composables/useYouTube.js'
 import { MODES } from './config/modes.js'
 import ProgressRing from './components/ProgressRing.vue'
 import BreakScreen from './components/BreakScreen.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import TodoList from './components/TodoList.vue'
 import SessionCompleteOverlay from './components/SessionCompleteOverlay.vue'
+import YouTubePlayer from './components/YouTubePlayer.vue'
 
 const showSettings = ref(false)
 const themeColorMeta = ref(null)
@@ -45,6 +47,10 @@ watch(sessions, () => {
   completionNewLevel.value = result.newLevel
   completionLevelTitle.value = levelTitle.value
 })
+
+// YouTube — pick URL for current mode, disable ambient when active
+const activeYouTubeUrl = computed(() => isBreak.value ? breakYouTubeUrl.value : focusYouTubeUrl.value)
+watchEffect(() => { youtubeActive.value = !!parseYouTubeUrl(activeYouTubeUrl.value) })
 
 // #4 — Animate ring track color as session progresses
 function lerpHex(a, b, t) {
@@ -199,10 +205,21 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
         :cfg="cfg"
         :durations="durations"
         :ambient-enabled="ambientEnabled"
+        :focus-url="focusYouTubeUrl"
+        :break-url="breakYouTubeUrl"
         @update-duration="updateDuration"
         @toggle-ambient="toggleAmbient(running, mode)"
+        @update-focus-url="focusYouTubeUrl = $event"
+        @update-break-url="breakYouTubeUrl = $event"
       />
     </Transition>
+
+    <!-- YouTube mini-player -->
+    <YouTubePlayer
+      :url="activeYouTubeUrl"
+      :playing="running"
+      :cfg="cfg"
+    />
 
     <BreakScreen
       :cfg="cfg"

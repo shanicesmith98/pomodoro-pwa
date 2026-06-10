@@ -6,6 +6,7 @@ let ambientMaster = null
 let fadeOutTimer = null
 
 export const ambientEnabled = ref(true)
+export const youtubeActive = ref(false)
 
 function getAudioCtx() {
   if (!sharedCtx || sharedCtx.state === 'closed') {
@@ -62,7 +63,7 @@ export function stopAmbient() {
 }
 
 export function fadeOutAmbient() {
-  if (!ambientMaster) return
+  if (!ambientMaster || youtubeActive.value) return
   const ctx = getAudioCtx()
   ambientMaster.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5)
   fadeOutTimer = setTimeout(stopAmbient, 1600)
@@ -132,7 +133,7 @@ function buildLofi(ctx, master) {
 
 export function startAmbient(type) {
   stopAmbient()
-  if (!ambientEnabled.value) return
+  if (!ambientEnabled.value || youtubeActive.value) return
 
   const ctx = getAudioCtx()
   const master = ctx.createGain()
