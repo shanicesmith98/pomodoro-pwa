@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { useTodos } from '../composables/useTodos.js'
 
+
+
 const props = defineProps({
   cfg:     { type: Object,  required: true },
   isBreak: { type: Boolean, default: false },
@@ -16,6 +18,34 @@ const {
 
 const showAll = ref(false)
 const focusMode = computed(() => props.running && !props.isBreak)
+const spinning = ref(false)
+
+function spinWheel() {
+  if (pendingTodos.value.length < 2 || spinning.value) return
+  spinning.value = true
+
+  const TICKS = 8
+  const INTERVAL_MS = 60
+  let tick = 0
+
+  const cycle = setInterval(() => {
+    // Pick a random task that isn't the current highlight, for visual variety
+    const others = pendingTodos.value.filter(t => t.id !== activeTask.value?.id)
+    const pool = others.length ? others : pendingTodos.value
+    const pick = pool[Math.floor(Math.random() * pool.length)]
+    setActiveTask(pick.id)
+    tick++
+    if (tick >= TICKS) {
+      clearInterval(cycle)
+      // Final pick: anything except where we started
+      const finalPool = pendingTodos.value.length > 1
+        ? pendingTodos.value.filter(t => t.id !== pinnedTaskId.value)
+        : pendingTodos.value
+      setActiveTask(finalPool[Math.floor(Math.random() * finalPool.length)].id)
+      spinning.value = false
+    }
+  }, INTERVAL_MS)
+}
 
 function accuracyLabel(todo) {
   if (!todo.estimate && !todo.actual) return null
@@ -168,6 +198,34 @@ function accuracyColor(todo) {
         </li>
       </TransitionGroup>
 
+      <!-- Random task picker -->
+      <Transition name="spin-btn">
+        <div v-if="pendingTodos.length >= 2" class="mt-3 flex justify-center">
+          <button
+            @click="spinWheel"
+            :disabled="spinning"
+            aria-label="Pick a random task to focus on"
+            class="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all active:scale-95"
+            :class="{ 'spin-shake': spinning }"
+            :style="{
+              background: 'rgba(255,255,255,0.06)',
+              color: spinning ? cfg.color : 'rgba(255,255,255,0.4)',
+              border: `1px solid ${spinning ? cfg.color + '60' : 'rgba(255,255,255,0.08)'}`,
+              cursor: spinning ? 'default' : 'pointer',
+            }"
+          >
+            <svg
+              width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"
+              :class="{ 'spin-icon': spinning }"
+            >
+              <circle cx="6.5" cy="6.5" r="5.5" :stroke="spinning ? cfg.color : 'rgba(255,255,255,0.4)'" stroke-width="1.2"/>
+              <path d="M4 6.5h5M6.5 4l2.5 2.5L6.5 9" :stroke="spinning ? cfg.color : 'rgba(255,255,255,0.4)'" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ spinning ? 'Picking…' : 'Pick for me' }}
+          </button>
+        </div>
+      </Transition>
+
       <div v-if="doneTodos.length" class="mt-4">
         <p class="text-xs font-medium uppercase tracking-widest mb-2" style="color: rgba(255,255,255,0.35)">Completed</p>
         <TransitionGroup name="task" tag="ul" class="flex flex-col gap-1.5 list-none p-0 m-0" aria-label="Completed tasks">
@@ -215,3 +273,18 @@ function accuracyColor(todo) {
     </p>
   </div>
 </template>
+
+<style scoped>
+.spin-icon {
+  animation: spin 0.5s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-btn-enter-active,
+.spin-btn-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.spin-btn-enter-from,
+.spin-btn-leave-to { opacity: 0; transform: translateY(4px); }
+</style>
