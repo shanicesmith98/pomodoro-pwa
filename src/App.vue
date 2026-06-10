@@ -42,6 +42,20 @@ const editInput = ref(null)
 let intervalId = null
 let wakeLock = null
 
+// ── Stretch prompts ──
+const STRETCH_PROMPTS = [
+  'Roll your shoulders back slowly, 5 times each direction.',
+  'Stand up and reach both arms overhead. Hold for 10 seconds.',
+  'Tilt your head gently to each side. Feel the neck stretch.',
+  'Look away from the screen — focus on something 20 feet away for 20 seconds.',
+  'Shake out your hands and wiggle your fingers for 15 seconds.',
+  'Take 4 slow deep breaths. In for 4 counts, out for 6.',
+  'Roll your ankles and point your toes a few times.',
+  'Gently roll your wrists in circles, both directions.',
+  'Stand up, march in place for 30 seconds.',
+  'Close your eyes and relax your jaw. Notice where you\'re holding tension.',
+]
+
 // ── Derived ──
 const cfg = computed(() => MODES[mode.value])
 const totalDuration = computed(() => durations.value[mode.value] * 60)
@@ -49,6 +63,9 @@ const progress = computed(() => 1 - timeLeft.value / totalDuration.value)
 const pendingTodos = computed(() => todos.value.filter(t => !t.done))
 const doneTodos = computed(() => todos.value.filter(t => t.done))
 const completedCount = computed(() => doneTodos.value.length)
+const isBreak = computed(() => mode.value === 'shortBreak' || mode.value === 'longBreak')
+const breakWarning = computed(() => isBreak.value && running.value && (timeLeft.value / totalDuration.value) <= 0.2)
+const currentStretchPrompt = ref(STRETCH_PROMPTS[0])
 
 // ── Persistence ──
 watch(todos, (val) => localStorage.setItem('pomo-todos', JSON.stringify(val)), { deep: true })
@@ -138,6 +155,7 @@ function startTimer() {
         const nextMode = sessions.value % 4 === 0 ? 'longBreak' : 'shortBreak'
         playChime('work')
         sendNotification('Focus session complete!', `Time for a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`)
+        currentStretchPrompt.value = STRETCH_PROMPTS[Math.floor(Math.random() * STRETCH_PROMPTS.length)]
         mode.value = nextMode
         timeLeft.value = durations.value[nextMode] * 60
       } else {
@@ -344,8 +362,34 @@ onUnmounted(() => {
       </div>
     </Transition>
 
+    <!-- Break warning -->
+    <Transition name="settings">
+      <div
+        v-if="breakWarning"
+        class="w-full max-w-sm rounded-2xl px-5 py-3 mb-4 text-center"
+        :style="{ background: cfg.cardBg }"
+      >
+        <p class="text-sm font-medium" :style="{ color: cfg.color }">Break ending soon — start wrapping up.</p>
+      </div>
+    </Transition>
+
+    <!-- Break stretch prompt -->
+    <Transition name="settings">
+      <div v-if="isBreak && running" class="w-full max-w-sm mb-6">
+        <p class="text-xs font-semibold uppercase tracking-widest mb-3" style="color: rgba(255,255,255,0.3)">
+          Stretch prompt
+        </p>
+        <div
+          class="rounded-2xl px-5 py-4"
+          :style="{ background: cfg.cardBg }"
+        >
+          <p class="text-sm leading-relaxed" style="color: rgba(255,255,255,0.75)">{{ currentStretchPrompt }}</p>
+        </div>
+      </div>
+    </Transition>
+
     <!-- To-do list -->
-    <div class="w-full max-w-sm">
+    <div class="w-full max-w-sm" :class="{ 'opacity-30 pointer-events-none select-none': isBreak && running }">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-semibold uppercase tracking-widest" style="color: rgba(255,255,255,0.3)">
           Tasks
