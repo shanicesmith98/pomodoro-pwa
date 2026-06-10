@@ -3,6 +3,7 @@ import { ref, computed, watch, watchEffect, onMounted } from 'vue'
 import { useTimer } from './composables/useTimer.js'
 import { useTodos } from './composables/useTodos.js'
 import { useXP } from './composables/useXP.js'
+import { useBodyDoubling } from './composables/useBodyDoubling.js'
 import { ambientEnabled, toggleAmbient, youtubeActive } from './composables/useAudio.js'
 import { focusYouTubeUrl, breakYouTubeUrl, parseYouTubeUrl } from './composables/useYouTube.js'
 import { MODES } from './config/modes.js'
@@ -32,6 +33,7 @@ const {
 
 const { activeTask, incrementActual } = useTodos()
 const { level, levelTitle, levelProgress, xpToNextLevel, isMaxLevel, addSessionXP } = useXP()
+const { focuserCount } = useBodyDoubling()
 
 const completionXP = ref(0)
 const completionLevelUp = ref(false)
@@ -162,6 +164,11 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
         {{ sessions }} session{{ sessions !== 1 ? 's' : '' }}
       </span>
     </div>
+
+    <!-- Body doubling indicator -->
+    <p class="text-xs mb-4" style="color: rgba(255,255,255,0.28)" aria-live="polite">
+      {{ focuserCount }} {{ focuserCount === 1 ? 'person' : 'people' }} focusing right now
+    </p>
 
     <!-- XP / level badge -->
     <div class="flex items-center gap-2 mb-4" aria-label="Experience points and level">
