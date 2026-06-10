@@ -91,7 +91,7 @@ export function useTimer() {
     showCompletion.value = true
     mode.value = nextMode
     timeLeft.value = durations.value[nextMode] * 60
-    startAmbient('lofi')
+    // Do not start ambient here — startTimer starts it when the user presses Start
   }
 
   function onBreakComplete() {
@@ -99,7 +99,7 @@ export function useTimer() {
     sendNotification('Break over!', 'Ready to focus again?')
     mode.value = 'work'
     timeLeft.value = durations.value.work * 60
-    startAmbient('rain')
+    // Do not start ambient here — startTimer starts it when the user presses Start
   }
 
   function startTimer() {
