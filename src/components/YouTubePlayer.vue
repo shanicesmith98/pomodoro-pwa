@@ -8,6 +8,8 @@ const props = defineProps({
   cfg:     { type: Object,  required: true },
 })
 
+const emit = defineEmits(['ended'])
+
 // Increment to force Vue to replace the inner div after destroy()
 const playerKey = ref(0)
 const playerId  = computed(() => `yt-player-${playerKey.value}`)
@@ -39,6 +41,10 @@ async function initPlayer() {
         if (seq !== initSeq) return  // stale — a newer player took over
         ready.value = true
         if (props.playing) ytPlayer.playVideo()
+      },
+      onStateChange(event) {
+        // YT.PlayerState.ENDED = 0
+        if (seq === initSeq && event.data === 0) emit('ended')
       },
     },
   })

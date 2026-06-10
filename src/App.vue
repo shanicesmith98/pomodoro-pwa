@@ -4,7 +4,7 @@ import { useTimer } from './composables/useTimer.js'
 import { useTodos } from './composables/useTodos.js'
 import { useXP } from './composables/useXP.js'
 import { useBodyDoubling } from './composables/useBodyDoubling.js'
-import { ambientEnabled, toggleAmbient, youtubeActive } from './composables/useAudio.js'
+import { ambientEnabled, toggleAmbient, youtubeActive, startAmbient } from './composables/useAudio.js'
 import { focusYouTubeUrl, breakYouTubeUrl, parseYouTubeUrl } from './composables/useYouTube.js'
 import { MODES } from './config/modes.js'
 import ProgressRing from './components/ProgressRing.vue'
@@ -53,6 +53,13 @@ watch(sessions, () => {
 // YouTube — pick URL for current mode, disable ambient when active
 const activeYouTubeUrl = computed(() => isBreak.value ? breakYouTubeUrl.value : focusYouTubeUrl.value)
 watchEffect(() => { youtubeActive.value = !!parseYouTubeUrl(activeYouTubeUrl.value) })
+
+function onYouTubeEnded() {
+  youtubeActive.value = false  // lift the guard so startAmbient can run
+  if (ambientEnabled.value && running.value) {
+    startAmbient(isBreak.value ? 'lofi' : 'rain')
+  }
+}
 
 // #4 — Animate ring track color as session progresses
 function lerpHex(a, b, t) {
@@ -226,6 +233,7 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
       :url="activeYouTubeUrl"
       :playing="running"
       :cfg="cfg"
+      @ended="onYouTubeEnded"
     />
 
     <BreakScreen
