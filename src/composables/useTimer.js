@@ -49,6 +49,8 @@ export function useTimer() {
   let intervalId = null
   let wakeLock = null
 
+  const showCompletion = ref(false)
+
   const cfg = computed(() => MODES[mode.value])
   const totalDuration = computed(() => durations.value[mode.value] * 60)
   const progress = computed(() => 1 - timeLeft.value / totalDuration.value)
@@ -86,6 +88,7 @@ export function useTimer() {
     playChime('work')
     sendNotification('Focus session complete!', `Time for a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`)
     currentStretchPrompt.value = STRETCH_PROMPTS[Math.floor(Math.random() * STRETCH_PROMPTS.length)]
+    showCompletion.value = true
     mode.value = nextMode
     timeLeft.value = durations.value[nextMode] * 60
     startAmbient('lofi')
@@ -156,7 +159,7 @@ export function useTimer() {
 
   return {
     mode, running, sessions, durations, timeLeft, currentStretchPrompt, todayMinutes,
-    cfg, totalDuration, progress, isBreak, breakWarning,
+    cfg, totalDuration, progress, isBreak, breakWarning, showCompletion,
     formatTime, toggleTimer, resetTimer, switchMode, updateDuration,
   }
 }

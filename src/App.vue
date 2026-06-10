@@ -8,6 +8,7 @@ import ProgressRing from './components/ProgressRing.vue'
 import BreakScreen from './components/BreakScreen.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import TodoList from './components/TodoList.vue'
+import SessionCompleteOverlay from './components/SessionCompleteOverlay.vue'
 
 const showSettings = ref(false)
 const themeColorMeta = ref(null)
@@ -22,7 +23,7 @@ function onModeKeydown(e, key) {
 
 const {
   mode, running, sessions, durations, timeLeft, currentStretchPrompt, todayMinutes,
-  cfg, progress, isBreak, breakWarning,
+  cfg, progress, isBreak, breakWarning, showCompletion,
   formatTime, toggleTimer, resetTimer, switchMode, updateDuration,
 } = useTimer()
 
@@ -180,6 +181,13 @@ const todayProgress = computed(() => Math.min(todayMinutes.value / todayTarget.v
     />
 
     <TodoList :cfg="cfg" :is-break="isBreak" :running="running" />
+
+    <SessionCompleteOverlay
+      v-if="showCompletion"
+      :sessions="sessions"
+      :cfg="cfg"
+      @dismiss="showCompletion = false"
+    />
   </div>
 </template>
 

@@ -15,27 +15,43 @@ function getAudioCtx() {
   return sharedCtx
 }
 
+function playNote(ctx, freq, startTime, duration, volume = 0.25, type = 'sine') {
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+  osc.type = type
+  osc.frequency.setValueAtTime(freq, startTime)
+  gain.gain.setValueAtTime(0, startTime)
+  gain.gain.linearRampToValueAtTime(volume, startTime + 0.02)
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
+  osc.start(startTime)
+  osc.stop(startTime + duration)
+}
+
 export function playChime(type = 'work') {
   const ctx = getAudioCtx()
-  const notes = type === 'work'
-    ? [523.25, 659.25, 783.99, 1046.5]
-    : [783.99, 659.25, 523.25]
 
-  let time = ctx.currentTime
-  notes.forEach((freq) => {
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(freq, time)
-    gain.gain.setValueAtTime(0, time)
-    gain.gain.linearRampToValueAtTime(0.25, time + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.6)
-    osc.start(time)
-    osc.stop(time + 0.6)
-    time += 0.18
-  })
+  if (type === 'work') {
+    // Satisfying ascending major arpeggio with a final chord bloom
+    const arp = [523.25, 659.25, 783.99, 1046.5]
+    let t = ctx.currentTime
+    arp.forEach((freq, i) => {
+      playNote(ctx, freq, t, 0.7, i === arp.length - 1 ? 0.3 : 0.22)
+      t += 0.16
+    })
+    // Bloom: play all notes together at the end
+    const bloom = ctx.currentTime + arp.length * 0.16 + 0.05
+    arp.forEach(freq => playNote(ctx, freq, bloom, 1.4, 0.12, 'sine'))
+  } else {
+    // Gentle descending for break end
+    const notes = [783.99, 659.25, 523.25]
+    let t = ctx.currentTime
+    notes.forEach(freq => {
+      playNote(ctx, freq, t, 0.6, 0.2)
+      t += 0.18
+    })
+  }
 }
 
 export function stopAmbient() {
