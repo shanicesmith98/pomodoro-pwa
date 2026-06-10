@@ -21,6 +21,16 @@ function requestNotificationPermission() {
   }
 }
 
+function todayKey() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function loadTodayMinutes() {
+  const stored = loadJSON('pomo-today', null)
+  if (stored && stored.date === todayKey()) return stored.minutes
+  return 0
+}
+
 export function useTimer() {
   const mode = ref('work')
   const running = ref(false)
@@ -28,6 +38,7 @@ export function useTimer() {
   const durations = ref(loadJSON('pomo-durations', { work: 25, shortBreak: 5, longBreak: 15 }))
   const timeLeft = ref(durations.value.work * 60)
   const currentStretchPrompt = ref(STRETCH_PROMPTS[0])
+  const todayMinutes = ref(loadTodayMinutes())
 
   let intervalId = null
   let wakeLock = null
@@ -66,6 +77,8 @@ export function useTimer() {
 
   function onSessionComplete() {
     sessions.value++
+    todayMinutes.value += durations.value.work
+    localStorage.setItem('pomo-today', JSON.stringify({ date: todayKey(), minutes: todayMinutes.value }))
     const nextMode = sessions.value % 4 === 0 ? 'longBreak' : 'shortBreak'
     playChime('work')
     sendNotification('Focus session complete!', `Time for a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`)
@@ -139,7 +152,7 @@ export function useTimer() {
   })
 
   return {
-    mode, running, sessions, durations, timeLeft, currentStretchPrompt,
+    mode, running, sessions, durations, timeLeft, currentStretchPrompt, todayMinutes,
     cfg, totalDuration, progress, isBreak, breakWarning,
     formatTime, toggleTimer, resetTimer, switchMode, updateDuration,
   }

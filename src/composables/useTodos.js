@@ -18,13 +18,14 @@ export function useTodos() {
   const pendingTodos = computed(() => todos.value.filter(t => !t.done))
   const doneTodos = computed(() => todos.value.filter(t => t.done))
   const completedCount = computed(() => doneTodos.value.length)
+  const activeTask = computed(() => pendingTodos.value[0] ?? null)
 
   watch(todos, (val) => localStorage.setItem('pomo-todos', JSON.stringify(val)), { deep: true })
 
   function addTodo() {
     const text = newTodo.value.trim()
     if (!text) return
-    todos.value.push({ id: Date.now(), text, done: false })
+    todos.value.push({ id: Date.now(), text, done: false, estimate: null })
     newTodo.value = ''
     nextTick(() => todoInput.value?.focus())
   }
@@ -54,9 +55,22 @@ export function useTodos() {
     editingId.value = null
   }
 
+  function setEstimate(id, val) {
+    const t = todos.value.find(t => t.id === id)
+    if (!t) return
+    const num = parseInt(val)
+    t.estimate = (num > 0 && num <= 20) ? num : null
+  }
+
+  function incrementActual(id) {
+    const t = todos.value.find(t => t.id === id)
+    if (!t) return
+    t.actual = (t.actual ?? 0) + 1
+  }
+
   return {
     todos, newTodo, editingId, editText, todoInput, editInput,
-    pendingTodos, doneTodos, completedCount,
-    addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit,
+    pendingTodos, doneTodos, completedCount, activeTask,
+    addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, incrementActual,
   }
 }
