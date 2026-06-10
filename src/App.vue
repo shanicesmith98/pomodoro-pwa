@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, watchEffect, onMounted } from 'vue'
+import { ref, computed, watch, watchEffect } from 'vue'
 import { useTimer } from './composables/useTimer.js'
 import { useTodos } from './composables/useTodos.js'
 import { useXP } from './composables/useXP.js'
@@ -15,8 +15,6 @@ import SessionCompleteOverlay from './components/SessionCompleteOverlay.vue'
 import YouTubePlayer from './components/YouTubePlayer.vue'
 
 const showSettings = ref(false)
-const themeColorMeta = ref(null)
-onMounted(() => { themeColorMeta.value = document.querySelector('meta[name="theme-color"]') })
 
 const modeKeys = Object.keys(MODES)
 function onModeKeydown(e, key) {

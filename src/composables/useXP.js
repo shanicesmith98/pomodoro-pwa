@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { loadJSON } from '../utils/storage.js'
 
 const XP_PER_SESSION = 10
 
@@ -10,13 +11,6 @@ const LEVEL_TITLES = [
   'Consistent', 'Dedicated', 'Unstoppable', 'Flow State',
   'Deep Work', 'Legendary',
 ]
-
-function loadJSON(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
-  } catch { return fallback }
-}
 
 function computeLevel(xp) {
   let lv = 1

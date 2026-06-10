@@ -1,9 +1,5 @@
 import { ref, watch } from 'vue'
-
-function loadJSON(key, fallback) {
-  try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback }
-  catch { return fallback }
-}
+import { loadJSON } from '../utils/storage.js'
 
 export const focusYouTubeUrl = ref(loadJSON('yt-focus-url', ''))
 export const breakYouTubeUrl = ref(loadJSON('yt-break-url', ''))

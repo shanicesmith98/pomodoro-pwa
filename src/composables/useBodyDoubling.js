@@ -25,8 +25,8 @@ function generateCount() {
 
   // Add deterministic-ish jitter seeded by the current 3-minute window
   // so it doesn't change every second but does drift naturally
-  const window = Math.floor(now.getTime() / (3 * 60 * 1000))
-  const jitter = ((window * 2654435761) >>> 0) % 7 - 3  // -3 to +3
+  const timeWindow = Math.floor(now.getTime() / (3 * 60 * 1000))
+  const jitter = ((timeWindow * 2654435761) >>> 0) % 7 - 3  // -3 to +3
   return Math.max(1, scaled + jitter)
 }
 

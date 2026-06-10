@@ -1,13 +1,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { MODES, STRETCH_PROMPTS } from '../config/modes.js'
 import { playChime, startAmbient, fadeOutAmbient, stopAmbient } from './useAudio.js'
-
-function loadJSON(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
-  } catch { return fallback }
-}
+import { loadJSON } from '../utils/storage.js'
 
 function sendNotification(title, body) {
   if ('Notification' in window && Notification.permission === 'granted') {

@@ -176,7 +176,7 @@ function accuracyColor(todo) {
                 v-if="accuracyLabel(todo)"
                 class="text-xs"
                 :style="{ color: accuracyColor(todo) }"
-                aria-label="`Calibration: ${accuracyLabel(todo)}`"
+                :aria-label="`Calibration: ${accuracyLabel(todo)}`"
               >{{ accuracyLabel(todo) }}</span>
             </div>
             <button
