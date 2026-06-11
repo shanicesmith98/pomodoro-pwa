@@ -79,17 +79,17 @@ export function useTimer() {
     sendNotification('Focus session complete!', `Time for a ${nextMode === 'longBreak' ? 'long' : 'short'} break.`)
     currentStretchPrompt.value = STRETCH_PROMPTS[Math.floor(Math.random() * STRETCH_PROMPTS.length)]
     showCompletion.value = true
+    fadeOutAmbient()
     mode.value = nextMode
     timeLeft.value = durations.value[nextMode] * 60
-    // Do not start ambient here — startTimer starts it when the user presses Start
   }
 
   function onBreakComplete() {
     playChime('break')
     sendNotification('Break over!', 'Ready to focus again?')
+    fadeOutAmbient()
     mode.value = 'work'
     timeLeft.value = durations.value.work * 60
-    // Do not start ambient here — startTimer starts it when the user presses Start
   }
 
   function startTimer() {

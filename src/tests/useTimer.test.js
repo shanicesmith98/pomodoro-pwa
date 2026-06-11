@@ -265,6 +265,41 @@ describe('session completion flow (simulated)', () => {
     expect(running.value).toBe(false)
     vi.useRealTimers()
   })
+
+  it('ambient fades out when work session ends naturally', async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const audioModule = await import('../composables/useAudio.js')
+    const fadeOutSpy = vi.spyOn(audioModule, 'fadeOutAmbient')
+    const { useTimer: freshTimer } = await import('../composables/useTimer.js')
+    const { timeLeft, toggleTimer } = withSetup(() => freshTimer())
+
+    timeLeft.value = 1
+    toggleTimer()
+    vi.advanceTimersByTime(1000)
+    await nextTick()
+
+    expect(fadeOutSpy).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('ambient fades out when break session ends naturally', async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    const audioModule = await import('../composables/useAudio.js')
+    const fadeOutSpy = vi.spyOn(audioModule, 'fadeOutAmbient')
+    const { useTimer: freshTimer } = await import('../composables/useTimer.js')
+    const { timeLeft, toggleTimer, switchMode } = withSetup(() => freshTimer())
+
+    switchMode('shortBreak')
+    timeLeft.value = 1
+    toggleTimer()
+    vi.advanceTimersByTime(1000)
+    await nextTick()
+
+    expect(fadeOutSpy).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
 })
 
 describe('formatTime', () => {
