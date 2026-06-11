@@ -27,7 +27,7 @@ watch(todos, (val) => localStorage.setItem('pomo-todos', JSON.stringify(val)), {
 function addTodo() {
   const text = newTodo.value.trim()
   if (!text) return
-  todos.value.push({ id: Date.now(), text, done: false, estimate: null })
+  todos.value.push({ id: uniqueId(), text, done: false, estimate: null })
   newTodo.value = ''
   nextTick(() => todoInput.value?.focus())
 }
@@ -77,10 +77,25 @@ function setActiveTask(id) {
   pinnedTaskId.value = id
 }
 
+let _idSeq = Date.now()
+function uniqueId() { return ++_idSeq }
+
+function breakDownTask(id, steps) {
+  const idx = todos.value.findIndex(t => t.id === id)
+  if (idx === -1) return
+  const newTasks = steps
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(text => ({ id: uniqueId(), text, done: false, estimate: null }))
+  if (!newTasks.length) return
+  todos.value.splice(idx, 1, ...newTasks)
+  if (pinnedTaskId.value === id) pinnedTaskId.value = newTasks[0].id
+}
+
 export function useTodos() {
   return {
     todos, newTodo, editingId, editText, todoInput, editInput,
     pendingTodos, doneTodos, completedCount, activeTask, pinnedTaskId,
-    addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, incrementActual, setActiveTask,
+    addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, incrementActual, setActiveTask, breakDownTask,
   }
 }

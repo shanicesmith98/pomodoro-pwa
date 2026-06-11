@@ -1,8 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { useTodos } from '../composables/useTodos.js'
-
-
 
 const props = defineProps({
   cfg:     { type: Object,  required: true },
@@ -13,12 +11,93 @@ const props = defineProps({
 const {
   todos, newTodo, editingId, editText, todoInput, editInput,
   pendingTodos, doneTodos, completedCount, activeTask, pinnedTaskId,
-  addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, setActiveTask,
+  addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, setActiveTask, breakDownTask,
 } = useTodos()
 
 const showAll = ref(false)
 const focusMode = computed(() => props.running && !props.isBreak)
 const spinning = ref(false)
+
+// ── Long-press / break-it-down ──────────────────────────────────────────────
+const HOLD_MS = 600
+const HOLD_DRIFT_PX = 8
+
+const holdingId = ref(null)
+let holdTimer = null
+let holdStartX = 0
+let holdStartY = 0
+
+function onHoldStart(todo, e) {
+  if (focusMode.value || editingId.value) return  // disabled during focus/edit
+  if (e.target.closest('button, input')) return   // don't intercept taps on child controls
+  holdingId.value = todo.id
+  holdStartX = e.clientX
+  holdStartY = e.clientY
+  holdTimer = setTimeout(() => {
+    holdingId.value = null
+    openBreakdown(todo.id)
+  }, HOLD_MS)
+}
+
+function onHoldMove(e) {
+  if (!holdTimer) return
+  const dx = e.clientX - holdStartX
+  const dy = e.clientY - holdStartY
+  if (dx * dx + dy * dy > HOLD_DRIFT_PX * HOLD_DRIFT_PX) cancelHold()
+}
+
+function cancelHold() {
+  clearTimeout(holdTimer)
+  holdTimer = null
+  holdingId.value = null
+}
+
+// ── Breakdown panel ──────────────────────────────────────────────────────────
+const breakdownId = ref(null)
+const breakdownSteps = ref([])
+const stepInputs = ref([])
+const hasFilledSteps = computed(() => breakdownSteps.value.some(s => s.trim()))
+
+function openBreakdown(id) {
+  breakdownId.value = id
+  breakdownSteps.value = ['', '']
+  nextTick(() => stepInputs.value[0]?.focus())
+}
+
+function closeBreakdown() {
+  breakdownId.value = null
+  breakdownSteps.value = []
+  stepInputs.value = []
+}
+
+function addStep() {
+  breakdownSteps.value.push('')
+  nextTick(() => stepInputs.value[breakdownSteps.value.length - 1]?.focus())
+}
+
+function removeStep(i) {
+  breakdownSteps.value.splice(i, 1)
+}
+
+function confirmBreakdown() {
+  if (!hasFilledSteps.value) { closeBreakdown(); return }
+  breakDownTask(breakdownId.value, breakdownSteps.value)
+  closeBreakdown()
+}
+
+function onStepKeydown(e, i) {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    if (i === breakdownSteps.value.length - 1) addStep()
+    else stepInputs.value[i + 1]?.focus()
+  } else if (e.key === 'Escape') {
+    closeBreakdown()
+  } else if (e.key === 'Backspace' && !breakdownSteps.value[i] && breakdownSteps.value.length > 1) {
+    e.preventDefault()
+    removeStep(i)
+    nextTick(() => stepInputs.value[Math.max(0, i - 1)]?.focus())
+  }
+}
 
 function spinWheel() {
   if (pendingTodos.value.length < 2 || spinning.value) return
@@ -138,64 +217,138 @@ function accuracyColor(todo) {
       <TransitionGroup name="task" tag="ul" class="flex flex-col gap-2 list-none p-0 m-0" aria-label="Pending tasks">
         <li
           v-for="todo in pendingTodos" :key="todo.id"
-          class="flex items-center gap-3 rounded-xl px-4 py-3 group transition-all"
-          :class="{ 'cursor-pointer': focusMode && todo.id !== activeTask?.id }"
-          :style="{
-            background: cfg.cardBg,
-            boxShadow: focusMode && todo.id === activeTask?.id
-              ? `0 0 0 2px ${cfg.color}, 0 1px 6px rgba(0,0,0,0.15)`
-              : '0 1px 6px rgba(0,0,0,0.15)',
-          }"
-          @click.self="focusMode && setActiveTask(todo.id)"
+          class="rounded-xl overflow-hidden"
         >
-          <button
-            @click="toggleTodo(todo.id)"
-            :aria-label="`Mark '${todo.text}' as complete`"
-            class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
-            :style="{ borderColor: focusMode && todo.id === activeTask?.id ? cfg.color : cfg.track }"
-          />
-          <input
-            v-if="editingId === todo.id"
-            ref="editInput"
-            v-model="editText"
-            @keydown.enter="saveEdit(todo.id)"
-            @keydown.escape="cancelEdit"
-            @blur="saveEdit(todo.id)"
-            :aria-label="`Edit task: ${todo.text}`"
-            class="flex-1 text-sm bg-transparent border-b focus:outline-none"
-            :style="{ borderColor: cfg.color, color: 'rgba(255,255,255,0.85)' }"
-          />
-          <span
-            v-else
-            @dblclick="!focusMode && startEdit(todo)"
-            @click="focusMode && setActiveTask(todo.id)"
-            :aria-label="focusMode ? `Focus on '${todo.text}'` : todo.text"
-            :aria-pressed="focusMode ? todo.id === activeTask?.id : undefined"
-            :role="focusMode ? 'button' : undefined"
-            class="flex-1 text-sm select-none transition-colors"
-            :class="{ 'cursor-pointer': focusMode }"
+          <!-- Task row -->
+          <div
+            class="flex items-center gap-3 px-4 py-3 group transition-all relative overflow-hidden"
+            :class="{ 'cursor-pointer': focusMode && todo.id !== activeTask?.id }"
             :style="{
-              color: focusMode && todo.id === activeTask?.id
-                ? 'rgba(255,255,255,0.95)'
-                : 'rgba(255,255,255,0.8)',
+              background: cfg.cardBg,
+              boxShadow: focusMode && todo.id === activeTask?.id
+                ? `0 0 0 2px ${cfg.color}, 0 1px 6px rgba(0,0,0,0.15)`
+                : '0 1px 6px rgba(0,0,0,0.15)',
             }"
-          >{{ todo.text }}</span>
-          <input
-            type="number"
-            min="1" max="20"
-            :value="todo.estimate ?? ''"
-            placeholder="—"
-            :aria-label="`Estimated pomodoros for '${todo.text}'`"
-            @change="setEstimate(todo.id, $event.target.value)"
-            class="w-8 text-center text-xs rounded-md bg-transparent border focus:outline-none focus:ring-1 py-0.5 placeholder:opacity-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            :style="{ borderColor: todo.estimate ? cfg.color : 'rgba(255,255,255,0.12)', color: todo.estimate ? cfg.color : 'rgba(255,255,255,0.35)' }"
-          />
-          <button
-            @click="deleteTodo(todo.id)"
-            :aria-label="`Delete '${todo.text}'`"
-            class="opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs transition-opacity"
-            style="color: rgba(255,255,255,0.35)"
-          >✕</button>
+            @click.self="focusMode && setActiveTask(todo.id)"
+            @pointerdown="onHoldStart(todo, $event)"
+            @pointerup="cancelHold"
+            @pointercancel="cancelHold"
+            @pointermove="onHoldMove"
+          >
+            <!-- Hold progress bar -->
+            <div
+              v-if="holdingId === todo.id"
+              class="hold-bar"
+              :style="{ background: cfg.color }"
+            />
+
+            <button
+              @click="toggleTodo(todo.id)"
+              :aria-label="`Mark '${todo.text}' as complete`"
+              class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
+              :style="{ borderColor: focusMode && todo.id === activeTask?.id ? cfg.color : cfg.track }"
+            />
+            <input
+              v-if="editingId === todo.id"
+              ref="editInput"
+              v-model="editText"
+              @keydown.enter="saveEdit(todo.id)"
+              @keydown.escape="cancelEdit"
+              @blur="saveEdit(todo.id)"
+              :aria-label="`Edit task: ${todo.text}`"
+              class="flex-1 text-sm bg-transparent border-b focus:outline-none"
+              :style="{ borderColor: cfg.color, color: 'rgba(255,255,255,0.85)' }"
+            />
+            <span
+              v-else
+              @dblclick="!focusMode && startEdit(todo)"
+              @click="focusMode && setActiveTask(todo.id)"
+              :aria-label="focusMode ? `Focus on '${todo.text}'` : todo.text"
+              :aria-pressed="focusMode ? todo.id === activeTask?.id : undefined"
+              :role="focusMode ? 'button' : undefined"
+              class="flex-1 text-sm select-none transition-colors"
+              :class="{ 'cursor-pointer': focusMode }"
+              :style="{
+                color: focusMode && todo.id === activeTask?.id
+                  ? 'rgba(255,255,255,0.95)'
+                  : 'rgba(255,255,255,0.8)',
+              }"
+            >{{ todo.text }}</span>
+            <input
+              type="number"
+              min="1" max="20"
+              :value="todo.estimate ?? ''"
+              placeholder="—"
+              :aria-label="`Estimated pomodoros for '${todo.text}'`"
+              @change="setEstimate(todo.id, $event.target.value)"
+              class="w-8 text-center text-xs rounded-md bg-transparent border focus:outline-none focus:ring-1 py-0.5 placeholder:opacity-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              :style="{ borderColor: todo.estimate ? cfg.color : 'rgba(255,255,255,0.12)', color: todo.estimate ? cfg.color : 'rgba(255,255,255,0.35)' }"
+            />
+            <button
+              @click="deleteTodo(todo.id)"
+              :aria-label="`Delete '${todo.text}'`"
+              class="opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs transition-opacity"
+              style="color: rgba(255,255,255,0.35)"
+            >✕</button>
+          </div>
+
+          <!-- Breakdown panel -->
+          <Transition name="breakdown">
+            <div
+              v-if="breakdownId === todo.id"
+              class="px-4 pb-4 pt-3"
+              :style="{ background: cfg.cardBg, borderTop: `1px solid rgba(255,255,255,0.06)` }"
+              role="group"
+              :aria-label="`Break down '${todo.text}'`"
+            >
+              <p class="text-xs font-semibold uppercase tracking-widest mb-3" :style="{ color: cfg.color, opacity: 0.7 }">
+                Break it down
+              </p>
+              <div class="flex flex-col gap-2 mb-3">
+                <div
+                  v-for="(_, i) in breakdownSteps" :key="i"
+                  class="flex items-center gap-2"
+                >
+                  <span class="text-xs w-4 text-right shrink-0" style="color: rgba(255,255,255,0.25)">{{ i + 1 }}</span>
+                  <input
+                    :ref="el => { if (el) stepInputs[i] = el }"
+                    v-model="breakdownSteps[i]"
+                    type="text"
+                    :placeholder="`Step ${i + 1}`"
+                    :aria-label="`Step ${i + 1}`"
+                    @keydown="onStepKeydown($event, i)"
+                    class="flex-1 rounded-lg px-3 py-1.5 text-sm border focus:outline-none focus:ring-1 placeholder:opacity-25"
+                    :style="{ borderColor: 'rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.85)' }"
+                  />
+                  <button
+                    v-if="breakdownSteps.length > 1"
+                    @click="removeStep(i)"
+                    :aria-label="`Remove step ${i + 1}`"
+                    class="text-xs shrink-0 transition-opacity opacity-40 hover:opacity-70"
+                    style="color: rgba(255,255,255,0.5)"
+                  >✕</button>
+                </div>
+              </div>
+              <button
+                @click="addStep"
+                class="text-xs mb-3 transition-opacity opacity-50 hover:opacity-80"
+                :style="{ color: cfg.color }"
+              >+ Add step</button>
+              <div class="flex gap-2">
+                <button
+                  @click="confirmBreakdown"
+                  :disabled="!hasFilledSteps"
+                  class="flex-1 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                  :style="{ background: cfg.color, color: cfg.bg, opacity: hasFilledSteps ? 1 : 0.4 }"
+                >Break it down</button>
+                <button
+                  @click="closeBreakdown"
+                  class="px-4 py-1.5 rounded-lg text-sm transition-colors"
+                  style="background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.5)"
+                >Cancel</button>
+              </div>
+            </div>
+          </Transition>
         </li>
       </TransitionGroup>
 
@@ -270,7 +423,7 @@ function accuracyColor(todo) {
     </div>
 
     <p class="mt-8 text-xs text-center" style="color: rgba(255,255,255,0.25)">
-      {{ focusMode ? 'Tap a task to switch focus' : 'Double-tap a task to edit' }}
+      {{ focusMode ? 'Tap a task to switch focus' : 'Double-tap to edit · Hold to break down' }}
     </p>
   </div>
 </template>
@@ -288,4 +441,23 @@ function accuracyColor(todo) {
 .spin-btn-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
 .spin-btn-enter-from,
 .spin-btn-leave-to { opacity: 0; transform: translateY(4px); }
+
+/* Hold progress bar sweeps across the bottom of the task row */
+.hold-bar {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  animation: hold-fill 600ms linear forwards;
+}
+
+@keyframes hold-fill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* Breakdown panel slide-in */
+.breakdown-enter-active { transition: all 0.22s ease; }
+.breakdown-leave-active { transition: all 0.18s ease; }
+.breakdown-enter-from, .breakdown-leave-to { opacity: 0; transform: translateY(-6px); }
 </style>
