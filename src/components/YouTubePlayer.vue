@@ -32,7 +32,7 @@ async function initPlayer() {
   }
 
   ytPlayer = new window.YT.Player(playerId.value, {
-    height: '80',
+    height: '160',
     width: '100%',
     videoId: parsed.value.type === 'video' ? parsed.value.videoId : undefined,
     playerVars: vars,
