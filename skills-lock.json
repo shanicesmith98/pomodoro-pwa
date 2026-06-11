@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "accessibility": {
+      "source": "microsoft/vscode",
+      "sourceType": "github",
+      "skillPath": ".github/skills/accessibility/SKILL.md",
+      "computedHash": "9591173e75b10cf4cd8990d785056705778faf55040e61e7ead33761cbf39239"
+    }
+  }
+}
