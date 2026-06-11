@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output (CI builds this fresh on every deploy)
+dist/
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vite
+*.local
