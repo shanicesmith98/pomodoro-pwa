@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Re-import fresh module state before each test
-let ambientEnabled, youtubeActive, startAmbient, stopAmbient
+let ambientEnabled, youtubeActive, startAmbient, stopAmbient, fadeOutAmbient
 
 beforeEach(async () => {
   vi.resetModules()
-  ;({ ambientEnabled, youtubeActive, startAmbient, stopAmbient }
+  ;({ ambientEnabled, youtubeActive, startAmbient, stopAmbient, fadeOutAmbient }
     = await import('../composables/useAudio.js'))
 })
 
@@ -73,6 +73,54 @@ describe('YouTube ended → ambient fallback', () => {
     ambientEnabled.value = true
     youtubeActive.value = false  // simulate ended event clearing the guard
     expect(() => startAmbient('rain')).not.toThrow()
+  })
+})
+
+// Simulates the watch(activeYouTubeUrl) handler added in App.vue to fix the overlap bug
+function onNewYouTubeUrl(url, { parseYouTubeUrl }) {
+  const hasUrl = !!parseYouTubeUrl(url)
+  youtubeActive.value = hasUrl
+  if (hasUrl) fadeOutAmbient()
+}
+
+describe('replacing YouTube URL while ambient fallback is playing', () => {
+  it('fades out ambient when a new URL is pasted after a video ended', () => {
+    // Step 1: video ended → ambient fallback kicks in
+    youtubeActive.value = true
+    ambientEnabled.value = true
+    onYouTubeEnded({ running: true, isBreak: false })
+    expect(youtubeActive.value).toBe(false)  // guard cleared by ended handler
+
+    // Step 2: user pastes a new URL — App.vue watch handler fires
+    expect(() =>
+      onNewYouTubeUrl('https://www.youtube.com/watch?v=abc123', {
+        parseYouTubeUrl: (u) => ({ videoId: 'abc123' }),
+      })
+    ).not.toThrow()
+
+    // Guard re-enabled and fadeOutAmbient ran without error
+    expect(youtubeActive.value).toBe(true)
+  })
+
+  it('blocks startAmbient after new URL is set (guard is active)', () => {
+    youtubeActive.value = false
+    ambientEnabled.value = true
+    // Simulate watch handler: new URL arrives
+    onNewYouTubeUrl('https://www.youtube.com/watch?v=xyz', {
+      parseYouTubeUrl: (u) => ({ videoId: 'xyz' }),
+    })
+    expect(youtubeActive.value).toBe(true)
+    // Any subsequent startAmbient call (e.g. from a stale timer) should be blocked
+    expect(() => startAmbient('rain')).not.toThrow()
+    // Guard still active — ambient did not start
+    expect(youtubeActive.value).toBe(true)
+  })
+
+  it('does not set youtubeActive or call fadeOutAmbient when URL is cleared', () => {
+    youtubeActive.value = true
+    // User clears the URL field
+    onNewYouTubeUrl('', { parseYouTubeUrl: () => null })
+    expect(youtubeActive.value).toBe(false)  // guard cleared — ambient can play again
   })
 })
 

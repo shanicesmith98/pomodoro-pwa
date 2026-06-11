@@ -6,7 +6,7 @@ import { useXP } from './composables/useXP.js'
 import { useStreak, recordSessionDay } from './composables/useStreak.js'
 import { useWinLog } from './composables/useWinLog.js'
 import { useBodyDoubling } from './composables/useBodyDoubling.js'
-import { ambientEnabled, toggleAmbient, youtubeActive, startAmbient } from './composables/useAudio.js'
+import { ambientEnabled, toggleAmbient, youtubeActive, startAmbient, fadeOutAmbient } from './composables/useAudio.js'
 import { focusYouTubeUrl, breakYouTubeUrl, parseYouTubeUrl } from './composables/useYouTube.js'
 import { MODES } from './config/modes.js'
 import ProgressRing from './components/ProgressRing.vue'
@@ -42,9 +42,16 @@ const completionLevelUp = ref(false)
 const completionNewLevel = ref(1)
 const completionLevelTitle = ref('')
 
+// Snapshot the focused task when a work session starts so completion
+// credits the right task even if the user marks it done mid-session.
+const sessionTaskId = ref(null)
+watch(running, (isRunning) => {
+  if (isRunning && !isBreak.value) sessionTaskId.value = activeTask.value?.id ?? null
+})
+
 // When a work session completes: credit task, award XP, record streak
 watch(sessions, () => {
-  if (activeTask.value) incrementActual(activeTask.value.id)
+  if (sessionTaskId.value) incrementActual(sessionTaskId.value)
   const result = addSessionXP()
   completionXP.value = result.xpGained
   completionLevelUp.value = result.didLevelUp
@@ -55,7 +62,11 @@ watch(sessions, () => {
 
 // YouTube — pick URL for current mode, disable ambient when active
 const activeYouTubeUrl = computed(() => isBreak.value ? breakYouTubeUrl.value : focusYouTubeUrl.value)
-watchEffect(() => { youtubeActive.value = !!parseYouTubeUrl(activeYouTubeUrl.value) })
+watch(activeYouTubeUrl, (url) => {
+  const hasUrl = !!parseYouTubeUrl(url)
+  youtubeActive.value = hasUrl
+  if (hasUrl) fadeOutAmbient()  // stop ambient that may be playing from a previous ended video
+}, { immediate: true })
 
 function onYouTubeEnded() {
   youtubeActive.value = false  // lift the guard so startAmbient can run

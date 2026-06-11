@@ -1,7 +1,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { MODES, STRETCH_PROMPTS } from '../config/modes.js'
 import { playChime, startAmbient, fadeOutAmbient, stopAmbient } from './useAudio.js'
-import { loadJSON } from '../utils/storage.js'
+import { loadJSON, todayKey } from '../utils/storage.js'
 
 function sendNotification(title, body) {
   if ('Notification' in window && Notification.permission === 'granted') {
@@ -19,10 +19,6 @@ let themeColorMeta = null
 function setThemeColor(color) {
   if (!themeColorMeta) themeColorMeta = document.querySelector('meta[name="theme-color"]')
   themeColorMeta?.setAttribute('content', color)
-}
-
-function todayKey() {
-  return new Date().toISOString().slice(0, 10)
 }
 
 function loadTodayMinutes() {

@@ -27,6 +27,7 @@ function spinWheel() {
   const TICKS = 8
   const INTERVAL_MS = 60
   let tick = 0
+  const originalId = pinnedTaskId.value  // capture before the spin mutates it
 
   const cycle = setInterval(() => {
     // Pick a random task that isn't the current highlight, for visual variety
@@ -39,7 +40,7 @@ function spinWheel() {
       clearInterval(cycle)
       // Final pick: anything except where we started
       const finalPool = pendingTodos.value.length > 1
-        ? pendingTodos.value.filter(t => t.id !== pinnedTaskId.value)
+        ? pendingTodos.value.filter(t => t.id !== originalId)
         : pendingTodos.value
       setActiveTask(finalPool[Math.floor(Math.random() * finalPool.length)].id)
       spinning.value = false

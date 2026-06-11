@@ -1,4 +1,4 @@
-import { ref, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 // Realistic focus activity curve by hour (0–23), index = hour
 const HOURLY_BASE = [
@@ -33,11 +33,12 @@ function generateCount() {
 export function useBodyDoubling() {
   const focuserCount = ref(generateCount())
 
-  const interval = setInterval(() => {
-    focuserCount.value = generateCount()
-  }, 3 * 60 * 1000)  // refresh every 3 minutes
-
-  onUnmounted(() => clearInterval(interval))
+  onMounted(() => {
+    const interval = setInterval(() => {
+      focuserCount.value = generateCount()
+    }, 3 * 60 * 1000)
+    onUnmounted(() => clearInterval(interval))
+  })
 
   return { focuserCount }
 }

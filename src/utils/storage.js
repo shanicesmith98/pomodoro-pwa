@@ -4,3 +4,7 @@ export function loadJSON(key, fallback) {
     return raw ? JSON.parse(raw) : fallback
   } catch { return fallback }
 }
+
+export function todayKey() {
+  return new Date().toISOString().slice(0, 10)
+}

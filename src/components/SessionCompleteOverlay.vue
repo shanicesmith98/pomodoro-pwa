@@ -20,6 +20,7 @@ onMounted(() => { setTimeout(() => winInput.value?.focus(), 400) })
 
 let timer = null
 function startDismissTimer() {
+  clearTimeout(timer)
   timer = setTimeout(() => emit('dismiss'), 8000)
 }
 function cancelDismissTimer() {

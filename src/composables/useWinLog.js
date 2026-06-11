@@ -1,9 +1,5 @@
 import { ref, computed } from 'vue'
-import { loadJSON } from '../utils/storage.js'
-
-function todayKey() {
-  return new Date().toISOString().slice(0, 10)
-}
+import { loadJSON, todayKey } from '../utils/storage.js'
 
 // Stored shape: { 'YYYY-MM-DD': ['win note', ...], ... }
 const log = ref(loadJSON('pomo-wins', {}))
