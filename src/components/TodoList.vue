@@ -236,14 +236,13 @@ function accuracyColor(todo) {
           <!-- Task row -->
           <div
             class="flex items-center gap-3 px-4 py-3 group transition-all relative overflow-hidden"
-            :class="{ 'cursor-pointer': focusMode && todo.id !== activeTask?.id }"
             :style="{
               background: cfg.cardBg,
-              boxShadow: focusMode && todo.id === activeTask?.id
+              boxShadow: todo.id === activeTask?.id
                 ? `0 0 0 2px ${cfg.color}, 0 1px 6px rgba(0,0,0,0.15)`
                 : '0 1px 6px rgba(0,0,0,0.15)',
             }"
-            @click.self="focusMode && setActiveTask(todo.id)"
+            @click.self="setActiveTask(todo.id)"
             @pointerdown="onHoldStart(todo, $event)"
             @pointerup="cancelHold"
             @pointercancel="cancelHold"
@@ -260,7 +259,7 @@ function accuracyColor(todo) {
               @click="toggleTodo(todo.id)"
               :aria-label="`Mark '${todo.text}' as complete`"
               class="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
-              :style="{ borderColor: focusMode && todo.id === activeTask?.id ? cfg.color : cfg.track }"
+              :style="{ borderColor: todo.id === activeTask?.id ? cfg.color : cfg.track }"
             />
             <input
               v-if="editingId === todo.id"
@@ -276,14 +275,13 @@ function accuracyColor(todo) {
             <span
               v-else
               @dblclick="!focusMode && startEdit(todo)"
-              @click="focusMode && setActiveTask(todo.id)"
-              :aria-label="focusMode ? `Focus on '${todo.text}'` : todo.text"
-              :aria-pressed="focusMode ? todo.id === activeTask?.id : undefined"
-              :role="focusMode ? 'button' : undefined"
-              class="flex-1 text-sm select-none transition-colors"
-              :class="{ 'cursor-pointer': focusMode }"
+              @click="setActiveTask(todo.id)"
+              :aria-label="`Focus on '${todo.text}'`"
+              :aria-pressed="todo.id === activeTask?.id"
+              role="button"
+              class="flex-1 text-sm select-none transition-colors cursor-pointer"
               :style="{
-                color: focusMode && todo.id === activeTask?.id
+                color: todo.id === activeTask?.id
                   ? 'rgba(255,255,255,0.95)'
                   : 'rgba(255,255,255,0.8)',
               }"
@@ -298,6 +296,14 @@ function accuracyColor(todo) {
               class="w-8 text-center text-xs rounded-md bg-transparent border focus:outline-none focus:ring-1 py-0.5 placeholder:opacity-40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               :style="{ borderColor: todo.estimate ? cfg.color : 'rgba(255,255,255,0.12)', color: todo.estimate ? cfg.color : 'rgba(255,255,255,0.35)' }"
             />
+            <button
+              v-if="!focusMode"
+              @click="openBreakdown(todo.id)"
+              :aria-label="`Break down '${todo.text}'`"
+              title="Break into steps"
+              class="opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs transition-opacity"
+              style="color: rgba(255,255,255,0.35)"
+            >⋯</button>
             <button
               @click="deleteTodo(todo.id)"
               :aria-label="`Delete '${todo.text}'`"
