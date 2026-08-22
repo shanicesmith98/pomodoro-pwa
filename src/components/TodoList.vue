@@ -148,9 +148,9 @@ function accuracyColor(todo) {
     class="w-full max-w-sm"
     :class="{ 'opacity-30 pointer-events-none select-none': isBreak && running }"
   >
-    <!-- Focus card: shown when work session is running -->
+    <!-- Focus card: shown when there's an active task (always) or in focus mode -->
     <Transition name="task">
-      <div v-if="focusMode" class="mb-4">
+      <div v-if="activeTask || focusMode" class="mb-4">
         <div
           v-if="activeTask"
           class="rounded-2xl px-5 py-4"
@@ -176,6 +176,7 @@ function accuracyColor(todo) {
         </p>
 
         <button
+          v-if="focusMode"
           @click="showAll = !showAll"
           :aria-expanded="showAll"
           aria-controls="full-task-list"
