@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref, nextTick, watch } from 'vue'
 import { useTodos } from '../composables/useTodos.js'
 
 const props = defineProps({
@@ -16,6 +16,7 @@ const {
 
 const showAll = ref(false)
 const focusMode = computed(() => props.running && !props.isBreak)
+watch(focusMode, (val) => { if (val) showAll.value = false })
 const spinning = ref(false)
 
 // ── Long-press / break-it-down ──────────────────────────────────────────────
