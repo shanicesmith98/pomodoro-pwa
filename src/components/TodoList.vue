@@ -10,13 +10,16 @@ const props = defineProps({
 
 const {
   todos, newTodo, editingId, editText, todoInput, editInput,
-  pendingTodos, doneTodos, completedCount, activeTask, pinnedTaskId,
-  addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, setActiveTask, breakDownTask,
+  pendingTodos, doneTodos, completedCount, activeTask, pinnedTaskId, tasklessMode,
+  addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, setActiveTask, clearActiveTask, breakDownTask,
 } = useTodos()
 
 const showAll = ref(false)
 const focusMode = computed(() => props.running && !props.isBreak)
-watch(focusMode, (val) => { if (val) showAll.value = false })
+watch(focusMode, (val) => {
+  if (val) showAll.value = false
+  else tasklessMode.value = false
+})
 const spinning = ref(false)
 
 // ── Long-press / break-it-down ──────────────────────────────────────────────
@@ -157,7 +160,15 @@ function accuracyColor(todo) {
           class="rounded-2xl px-5 py-4"
           :style="{ background: cfg.cardBg, boxShadow: '0 1px 12px rgba(0,0,0,0.2)' }"
         >
-          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color: rgba(255,255,255,0.5)">Now focusing on</p>
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold uppercase tracking-widest" style="color: rgba(255,255,255,0.5)">Now focusing on</p>
+            <button
+              @click="clearActiveTask"
+              aria-label="Clear focused task"
+              class="text-xs leading-none transition-opacity hover:opacity-100"
+              style="color: rgba(255,255,255,0.3)"
+            >✕</button>
+          </div>
           <div class="flex items-start gap-3">
             <button
               @click="toggleTodo(activeTask.id)"
@@ -172,9 +183,10 @@ function accuracyColor(todo) {
             <span v-if="activeTask.actual"> · {{ activeTask.actual }} actual so far</span>
           </div>
         </div>
-        <p v-else class="text-center text-sm py-3" style="color: rgba(255,255,255,0.35)">
-          No tasks — add one below to get started.
-        </p>
+        <div v-else-if="focusMode" class="rounded-2xl px-5 py-4 text-center" :style="{ background: cfg.cardBg, boxShadow: '0 1px 12px rgba(0,0,0,0.2)' }">
+          <p class="text-sm mb-1" style="color: rgba(255,255,255,0.5)">Focusing without a task</p>
+          <p class="text-xs" style="color: rgba(255,255,255,0.25)">Tap a task below to pin it</p>
+        </div>
 
         <button
           v-if="focusMode"

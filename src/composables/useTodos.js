@@ -9,11 +9,13 @@ const editText = ref('')
 const todoInput = ref(null)
 const editInput = ref(null)
 const pinnedTaskId = ref(null)
+const tasklessMode = ref(false)
 
 const pendingTodos = computed(() => todos.value.filter(t => !t.done))
 const doneTodos = computed(() => todos.value.filter(t => t.done))
 const completedCount = computed(() => doneTodos.value.length)
 const activeTask = computed(() => {
+  if (tasklessMode.value) return null
   if (pinnedTaskId.value) {
     const pinned = pendingTodos.value.find(t => t.id === pinnedTaskId.value)
     if (pinned) return pinned
@@ -74,7 +76,13 @@ function incrementActual(id) {
 }
 
 function setActiveTask(id) {
+  tasklessMode.value = false
   pinnedTaskId.value = id
+}
+
+function clearActiveTask() {
+  tasklessMode.value = true
+  pinnedTaskId.value = null
 }
 
 let _idSeq = Date.now()
@@ -95,7 +103,7 @@ function breakDownTask(id, steps) {
 export function useTodos() {
   return {
     todos, newTodo, editingId, editText, todoInput, editInput,
-    pendingTodos, doneTodos, completedCount, activeTask, pinnedTaskId,
-    addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, incrementActual, setActiveTask, breakDownTask,
+    pendingTodos, doneTodos, completedCount, activeTask, pinnedTaskId, tasklessMode,
+    addTodo, toggleTodo, deleteTodo, startEdit, saveEdit, cancelEdit, setEstimate, incrementActual, setActiveTask, clearActiveTask, breakDownTask,
   }
 }
